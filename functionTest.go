@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"sync"
 )
 
 // 渡した名前を使用して、コマンドラインにテキストを出力する
@@ -25,6 +26,16 @@ func errorHundring(x float64) (float64, error) {
 	}
 }
 
+func sayHello(wg *sync.WaitGroup) {
+	fmt.Println("Hello")
+	wg.Done() // Decrease counter
+}
+
+func sayWorld(wg *sync.WaitGroup) {
+	fmt.Println("World")
+	wg.Done() // Decrease counter
+}
+
 // mainファンクション
 func main() {
 	// テキスト出力関数の呼び出し
@@ -45,5 +56,15 @@ func main() {
 	} else {
 		fmt.Println("Result:", number)
 	}
+
+	// ゴルーチン動作テスト
+	var wg sync.WaitGroup
+
+	wg.Add(2) // Increase counter
+
+	go sayHello(&wg)
+	go sayWorld(&wg)
+
+	wg.Wait() // Wait for counter to be 0
 
 }
