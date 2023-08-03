@@ -107,7 +107,7 @@ func main() {
 	}
 
 	ebiten.SetWindowSize(screenWidth, screenHeight) // ウィンドウのサイズを設定
-	ebiten.SetWindowTitle("Pong ")                  // ウィンドウのタイトルを設定
+	ebiten.SetWindowTitle("Pong")                   // ウィンドウのタイトルを設定
 
 	// ゲームの実行
 	if err := ebiten.RunGame(g); err != nil {
