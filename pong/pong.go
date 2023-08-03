@@ -1,106 +1,116 @@
 package main
 
 import (
+	"fmt"
 	"image/color"
 	"log"
 
-	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2"            // ebitenパッケージをインポート
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil" // ebitenutilパッケージをインポート
+	"github.com/hajimehoshi/ebiten/v2/text"       // textパッケージをインポート
+	"golang.org/x/image/font/basicfont"           // basicfontパッケージをインポート
 )
 
+// ゲーム画面やボール、パドルのサイズ、パドルの移動速度を設定
 const (
-	// 画面の幅と高さ
 	screenWidth, screenHeight = 640, 480
-	// パドルの幅と高さ
 	paddleWidth, paddleHeight = 20, 80
-	// ボールのサイズ
-	ballSize = 20
-	// パドルの速度
-	paddleSpeed = 4
+	ballSize                  = 20
+	paddleSpeed               = 4
 )
 
-// ゲームの状態を管理する構造体
+// Game型の定義
 type Game struct {
 	ballPositionX, ballPositionY float64 // ボールの位置
-	ballDX, ballDY               float64 // ボールの速度
+	ballDX, ballDY               float64 // ボールの移動速度
 	paddle1Y, paddle2Y           float64 // パドルの位置
+	player1Score, player2Score   int     // プレイヤーのスコア
 }
 
-// ゲームの状態を更新する関数
+// Updateはゲームの状態を更新するためのメソッド
 func (g *Game) Update() error {
-	g.ballPositionX += g.ballDX
-	g.ballPositionY += g.ballDY
+	g.ballPositionX += g.ballDX // ボールのx座標を更新
+	g.ballPositionY += g.ballDY // ボールのy座標を更新
 
-	// ボールが左端または右端に到達した場合、ボールの方向を反転させる
-	if g.ballPositionX < 0 {
-		g.ballDX = -g.ballDX
-		g.ballPositionX = 0
-	} else if g.ballPositionX > screenWidth-ballSize {
-		g.ballDX = -g.ballDX
-		g.ballPositionX = screenWidth - ballSize
+	if g.ballPositionX < 0 { // ボールが左の壁に当たった時
+		g.ballDX = -g.ballDX // ボールの向きを反転
+		g.ballPositionX = 0  // ボールのx座標を0に設定
+		g.player2Score++     // プレイヤー2のスコアを加算
+		// ボールを中央に戻す
+		g.ballPositionX = screenWidth / 2
+		g.ballPositionY = screenHeight / 2
+	} else if g.ballPositionX > screenWidth-ballSize { // ボールが右の壁に当たった時
+		g.ballDX = -g.ballDX                     // ボールの向きを反転
+		g.ballPositionX = screenWidth - ballSize // ボールのx座標を右端に設定
+		g.player1Score++                         // プレイヤー1のスコアを加算
+		// ボールを中央に戻す
+		g.ballPositionX = screenWidth / 2
+		g.ballPositionY = screenHeight / 2
 	}
-	// ボールが上端または下端に到達した場合、ボールの方向を反転させる
-	if g.ballPositionY < 0 {
-		g.ballDY = -g.ballDY
-		g.ballPositionY = 0
-	} else if g.ballPositionY > screenHeight-ballSize {
-		g.ballDY = -g.ballDY
-		g.ballPositionY = screenHeight - ballSize
+	if g.ballPositionY < 0 { // ボールが上の壁に当たった時
+		g.ballDY = -g.ballDY // ボールの向きを反転
+		g.ballPositionY = 0  // ボールのy座標を0に設定
+	} else if g.ballPositionY > screenHeight-ballSize { // ボールが下の壁に当たった時
+		g.ballDY = -g.ballDY                      // ボールの向きを反転
+		g.ballPositionY = screenHeight - ballSize // ボールのy座標を下端に設定
 	}
 
-	// プレイヤーの操作によりパドルを移動させる
-	if ebiten.IsKeyPressed(ebiten.KeyW) {
+	// パドルの操作
+	if ebiten.IsKeyPressed(ebiten.KeyW) { // Wキーが押された時、パドル1を上に動かす
 		g.paddle1Y -= paddleSpeed
 	}
-	if ebiten.IsKeyPressed(ebiten.KeyS) {
+	if ebiten.IsKeyPressed(ebiten.KeyS) { // Sキーが押された時、パドル1を下に動かす
 		g.paddle1Y += paddleSpeed
 	}
-	if ebiten.IsKeyPressed(ebiten.KeyUp) {
+	if ebiten.IsKeyPressed(ebiten.KeyUp) { // Upキーが押された時、パドル2を上に動かす
 		g.paddle2Y -= paddleSpeed
 	}
-	if ebiten.IsKeyPressed(ebiten.KeyDown) {
+	if ebiten.IsKeyPressed(ebiten.KeyDown) { // Downキーが押された時、パドル2を下に動かす
 		g.paddle2Y += paddleSpeed
 	}
 
-	// ボールとパドルが衝突した場合、ボールの方向を反転させる
+	// ボールとパドルが接触した時の処理
 	if (g.ballPositionX < paddleWidth && g.ballPositionY+ballSize > g.paddle1Y && g.ballPositionY < g.paddle1Y+paddleHeight) ||
 		(g.ballPositionX+ballSize > screenWidth-paddleWidth && g.ballPositionY+ballSize > g.paddle2Y && g.ballPositionY < g.paddle2Y+paddleHeight) {
-		g.ballDX = -g.ballDX
+		g.ballDX = -g.ballDX // ボールの向きを反転
 	}
 
 	return nil
 }
 
-// 画面を描画する関数
+// Drawはゲームの描画を行うメソッド
 func (g *Game) Draw(screen *ebiten.Image) {
-	// パドルとボールを描画する
+	// パドルとボールの描画
 	ebitenutil.DrawRect(screen, 10, g.paddle1Y, paddleWidth, paddleHeight, color.White)
 	ebitenutil.DrawRect(screen, screenWidth-30, g.paddle2Y, paddleWidth, paddleHeight, color.White)
 	ebitenutil.DrawRect(screen, g.ballPositionX, g.ballPositionY, ballSize, ballSize, color.White)
+
+	// スコアの描画
+	score := fmt.Sprintf("Player 1: %d - Player 2: %d", g.player1Score, g.player2Score)
+	text.Draw(screen, score, basicfont.Face7x13, screenWidth/2-50, 30, color.White)
 }
 
-// 画面のレイアウトを設定する関数
+// Layoutはウィンドウのサイズを設定するメソッド
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	return screenWidth, screenHeight
 }
 
+// main関数
 func main() {
-	// ゲームの初期状態を設定
 	g := &Game{
-		ballPositionX: screenWidth / 2,
-		ballPositionY: screenHeight / 2,
-		ballDX:        2,
-		ballDY:        2,
-		paddle1Y:      screenHeight/2 - paddleHeight/2,
-		paddle2Y:      screenHeight/2 - paddleHeight/2,
+		ballPositionX: screenWidth / 2,                 // ボールの初期x座標を設定
+		ballPositionY: screenHeight / 2,                // ボールの初期y座標を設定
+		ballDX:        2,                               // ボールの初期x方向の速度を設定
+		ballDY:        2,                               // ボールの初期y方向の速度を設定
+		paddle1Y:      screenHeight/2 - paddleHeight/2, // パドル1の初期位置を設定
+		paddle2Y:      screenHeight/2 - paddleHeight/2, // パドル2の初期位置を設定
 	}
 
-	// ウィンドウのサイズとタイトルを設定
-	ebiten.SetWindowSize(screenWidth, screenHeight)
-	ebiten.SetWindowTitle("Pong")
+	ebiten.SetWindowSize(screenWidth, screenHeight) // ウィンドウのサイズを設定
+	ebiten.SetWindowTitle("Pong ")                  // ウィンドウのタイトルを設定
 
-	// ゲームを実行する
+	// ゲームの実行
 	if err := ebiten.RunGame(g); err != nil {
-		log.Fatal(err)
+		log.Fatal(err) // エラーが発生した場合、プログラムを終了
 	}
 }
